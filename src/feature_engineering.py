@@ -78,9 +78,16 @@ def build_and_save_preprocessor(df: pd.DataFrame, output_path: str):
         ("scaler", StandardScaler())
     ])
 
+    # OneHotEncoder argument changed across sklearn versions
+    try:
+        ohe = OneHotEncoder(handle_unknown="ignore", sparse=False)
+    except TypeError:
+        # newer sklearn uses `sparse_output` instead of `sparse`
+        ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+
     categorical_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", OneHotEncoder(handle_unknown="ignore", sparse=False))
+        ("onehot", ohe)
     ])
 
     preprocessor = ColumnTransformer(transformers=[
