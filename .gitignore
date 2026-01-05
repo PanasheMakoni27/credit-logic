@@ -1,0 +1,7 @@
+# Ignore processed data and model artifacts
+data/processed/
+models/
+
+# Byte-compiled / cache
+__pycache__/
+.pytest_cache/
