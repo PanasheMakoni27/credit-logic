@@ -1,0 +1,8 @@
+{
+  "roc_path": "reports/baseline\\baseline_roc.png",
+  "pr_path": "reports/baseline\\baseline_pr.png",
+  "classification_report": "reports/baseline\\baseline_classification.txt",
+  "mistakes_csv": "reports/baseline\\baseline_mistakes.csv",
+  "roc_auc": 0.9392207594059788,
+  "average_precision": 0.8386273774213739
+}
