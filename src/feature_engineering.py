@@ -52,20 +52,17 @@ def build_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_and_save_preprocessor(df: pd.DataFrame, output_path: str):
-    """Fit a preprocessing pipeline on the provided dataframe and save it.
+    """Fit and save preprocessing pipeline and a feature map JSON.
 
-    The pipeline imputes numeric features with median, scales them, and one-hot encodes
-    categorical features (including newly created buckets). The fitted pipeline is saved
-    as `output_path` using joblib.
+    Returns the fitted preprocessor.
     """
-    # Choose some sensible numeric and categorical features (best-effort)
+    # Select numeric and categorical features
     numeric_feats = [
         c for c in [
             "AnnualIncome", "TotalAssets", "MonthlyDebtPayments", "MonthlyIncome", "CreditScore", "TotalDebtToIncomeRatio",
         ] if c in df.columns
     ]
 
-    # Add engineered numeric columns if present
     for engineered in ["Log_AnnualIncome", "Log_TotalAssets", "CreditScore_DTI_interaction"]:
         if engineered in df.columns and engineered not in numeric_feats:
             numeric_feats.append(engineered)
@@ -75,19 +72,20 @@ def build_and_save_preprocessor(df: pd.DataFrame, output_path: str):
     # Build transformers
     numeric_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="median")),
-        ("scaler", StandardScaler())
+        ("scaler", StandardScaler()),
     ])
-
-    # OneHotEncoder argument changed across sklearn versions
+    # Create a OneHotEncoder in a version-compatible way
     try:
         ohe = OneHotEncoder(handle_unknown="ignore", sparse=False)
     except TypeError:
-        # newer sklearn uses `sparse_output` instead of `sparse`
-        ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        try:
+            ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        except TypeError:
+            ohe = OneHotEncoder(handle_unknown="ignore")
 
     categorical_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("onehot", ohe)
+        ("onehot", ohe),
     ])
 
     preprocessor = ColumnTransformer(transformers=[
@@ -99,11 +97,55 @@ def build_and_save_preprocessor(df: pd.DataFrame, output_path: str):
     X_sample = df[numeric_feats + categorical_feats].copy()
     preprocessor.fit(X_sample)
 
-    # Ensure parent dir exists
+    # Persist preprocessor
     outdir = pathlib.Path(output_path).parent
     outdir.mkdir(parents=True, exist_ok=True)
-
     joblib.dump(preprocessor, output_path)
+
+    # Build a feature map for reproducibility and explainability
+    feature_map = {
+        "numeric_features": numeric_feats,
+        "categorical_features": {},
+        "feature_names": list(numeric_feats),
+    }
+
+    # Try to extract categories from fitted OneHotEncoder
+    try:
+        cat_pipeline = preprocessor.named_transformers_.get("cat")
+        ohe_fitted = None
+        if cat_pipeline is not None and hasattr(cat_pipeline, "named_steps"):
+            ohe_fitted = cat_pipeline.named_steps.get("onehot")
+        # fallback: inspect steps
+        if ohe_fitted is None:
+            for step in getattr(cat_pipeline, "steps", []):
+                if isinstance(step[1], OneHotEncoder):
+                    ohe_fitted = step[1]
+                    break
+
+        if ohe_fitted is not None and hasattr(ohe_fitted, "categories_"):
+            for col, cats in zip(categorical_feats, ohe_fitted.categories_):
+                cat_list = [str(x) for x in list(cats)]
+                feature_map["categorical_features"][col] = cat_list
+                for cat in cat_list:
+                    feature_map["feature_names"].append(f"{col}__{cat}")
+        else:
+            for col in categorical_feats:
+                feature_map["categorical_features"][col] = []
+    except Exception:
+        # Non-fatal; continue without categorical mapping
+        pass
+
+    # Save feature map JSON
+    fmap_path = outdir.parent / "models" / "feature_map.json"
+    try:
+        fmap_path.parent.mkdir(parents=True, exist_ok=True)
+        import json
+
+        with open(fmap_path, "w", encoding="utf-8") as fh:
+            json.dump(feature_map, fh, indent=2, ensure_ascii=False)
+        print(f"Saved feature map to {fmap_path}")
+    except Exception:
+        print("Warning: could not save feature_map.json")
 
     print(f"Saved preprocessor to {output_path}")
     return preprocessor
