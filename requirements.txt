@@ -4,3 +4,4 @@ joblib
 numpy
 # optional: pyarrow if you want parquet output
 pyarrow
+shap
