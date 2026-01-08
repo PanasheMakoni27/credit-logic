@@ -63,11 +63,17 @@ def build_and_save_preprocessor(df: pd.DataFrame, output_path: str):
         ] if c in df.columns
     ]
 
-    for engineered in ["Log_AnnualIncome", "Log_TotalAssets", "CreditScore_DTI_interaction"]:
+    for engineered in [
+        "Log_AnnualIncome",
+        "Log_TotalAssets",
+        "CreditScore_DTI_interaction",
+        "Total_Liquid",
+        "CreditUtilization",
+    ]:
         if engineered in df.columns and engineered not in numeric_feats:
             numeric_feats.append(engineered)
 
-    categorical_feats = [c for c in ["AgeBucket", "DTI_Bucket"] if c in df.columns]
+    categorical_feats = [c for c in ["AgeBucket", "DTI_Bucket", "DTI_Risk"] if c in df.columns]
 
     # Build transformers
     numeric_transformer = Pipeline(steps=[
