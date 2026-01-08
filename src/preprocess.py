@@ -40,28 +40,30 @@ def add_super_clues(df: pd.DataFrame) -> pd.DataFrame:
     # Wealth indicator: sum of Savings and Checking if present
     savings_col = None
     checking_col = None
-    for c in ["Savings", "Checking", "SavingsBalance", "CheckingBalance"]:
-        if c in df.columns and savings_col is None:
-            savings_col = c if "Savings" in c else savings_col
+    # Look for common savings/checking column names
+    for c in ["Savings", "Checking", "SavingsBalance", "CheckingBalance", "SavingsAccountBalance", "CheckingAccountBalance"]:
+        if c in df.columns and savings_col is None and "Savings" in c:
+            savings_col = c
         if c in df.columns and checking_col is None and "Checking" in c:
             checking_col = c
-
-    # fallback to generic columns if present
-    if savings_col is None and "Savings" in df.columns:
-        savings_col = "Savings"
-    if checking_col is None and "Checking" in df.columns:
-        checking_col = "Checking"
 
     if savings_col or checking_col:
         s = df[savings_col] if savings_col in df.columns else 0
         c = df[checking_col] if checking_col in df.columns else 0
         df["Total_Liquid"] = pd.to_numeric(s, errors="coerce").fillna(0) + pd.to_numeric(c, errors="coerce").fillna(0)
 
-    # Credit Utilization: CurrentBalance / TotalAvailableCredit
-    if "CurrentBalance" in df.columns and "TotalAvailableCredit" in df.columns:
-        cur = pd.to_numeric(df["CurrentBalance"], errors="coerce").fillna(0)
-        avail = pd.to_numeric(df["TotalAvailableCredit"], errors="coerce").replace(0, np.nan)
-        df["CreditUtilization"] = (cur / avail).replace([np.inf, -np.inf], np.nan).fillna(0)
+    # Credit Utilization: prefer an existing utilization column, else compute if possible
+    if "CreditUtilization" in df.columns:
+        df["CreditUtilization"] = pd.to_numeric(df["CreditUtilization"], errors="coerce").fillna(0)
+    elif "CreditCardUtilizationRate" in df.columns:
+        # assume this is already a 0-1 rate
+        df["CreditUtilization"] = pd.to_numeric(df["CreditCardUtilizationRate"], errors="coerce").fillna(0)
+    else:
+        # fallback if fields for computation exist
+        if "CurrentBalance" in df.columns and "TotalAvailableCredit" in df.columns:
+            cur = pd.to_numeric(df["CurrentBalance"], errors="coerce").fillna(0)
+            avail = pd.to_numeric(df["TotalAvailableCredit"], errors="coerce").replace(0, np.nan)
+            df["CreditUtilization"] = (cur / avail).replace([np.inf, -np.inf], np.nan).fillna(0)
 
     return df
 
