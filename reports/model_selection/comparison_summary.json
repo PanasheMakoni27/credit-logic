@@ -1,0 +1,29 @@
+{
+  "logistic": {
+    "model_file": "C:\\Users\\prese\\Downloads\\credit-logic\\models\\logistic--20260109T160411Z.joblib",
+    "name": "logistic",
+    "timestamp": "20260109T160411Z",
+    "best_params": {
+      "penalty": "l1",
+      "C": 0.2682695795279725
+    },
+    "cv_score": 0.937505762496035,
+    "test_roc_auc": 0.9430040026611097,
+    "test_pr_auc": 0.8475924779019296
+  },
+  "tree": {
+    "model_file": "C:\\Users\\prese\\Downloads\\credit-logic\\models\\tree--20260109T160427Z.joblib",
+    "name": "tree",
+    "timestamp": "20260109T160427Z",
+    "best_params": {
+      "subsample": 0.6,
+      "n_estimators": 200,
+      "max_depth": 3,
+      "learning_rate": 0.05,
+      "colsample_bytree": 0.6
+    },
+    "cv_score": 0.9366588012552803,
+    "test_roc_auc": 0.9421483513764646,
+    "test_pr_auc": 0.846702686110482
+  }
+}

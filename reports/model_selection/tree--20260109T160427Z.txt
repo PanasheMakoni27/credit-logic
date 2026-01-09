@@ -1,0 +1,33 @@
+Name: tree
+Best CV ROC-AUC: 0.9367
+Test ROC-AUC: 0.9421
+Test PR AUC: 0.8467
+
+Classification report:
+{
+  "0": {
+    "precision": 0.9111181905065308,
+    "recall": 0.9395532194480947,
+    "f1-score": 0.9251172569949863,
+    "support": 3044.0
+  },
+  "1": {
+    "precision": 0.7862950058072009,
+    "recall": 0.7081589958158996,
+    "f1-score": 0.7451843698403963,
+    "support": 956.0
+  },
+  "accuracy": 0.88425,
+  "macro avg": {
+    "precision": 0.8487065981568658,
+    "recall": 0.8238561076319971,
+    "f1-score": 0.8351508134176913,
+    "support": 4000.0
+  },
+  "weighted avg": {
+    "precision": 0.8812854493633909,
+    "recall": 0.88425,
+    "f1-score": 0.8821132969650394,
+    "support": 4000.0
+  }
+}

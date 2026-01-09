@@ -1,0 +1,33 @@
+Name: logistic
+Best CV ROC-AUC: 0.9375
+Test ROC-AUC: 0.9430
+Test PR AUC: 0.8476
+
+Classification report:
+{
+  "0": {
+    "precision": 0.9578829668281774,
+    "recall": 0.8442838370565046,
+    "f1-score": 0.8975030557010651,
+    "support": 3044.0
+  },
+  "1": {
+    "precision": 0.6400911161731208,
+    "recall": 0.8817991631799164,
+    "f1-score": 0.7417509898812142,
+    "support": 956.0
+  },
+  "accuracy": 0.85325,
+  "macro avg": {
+    "precision": 0.798987041500649,
+    "recall": 0.8630415001182105,
+    "f1-score": 0.8196270227911397,
+    "support": 4000.0
+  },
+  "weighted avg": {
+    "precision": 0.881930714521619,
+    "recall": 0.85325,
+    "f1-score": 0.8602783119701207,
+    "support": 4000.0
+  }
+}
