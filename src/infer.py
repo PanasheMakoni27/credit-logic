@@ -76,21 +76,49 @@ def load_input(args):
     return df
 
 
-def explain_with_shap(model, X, feature_names, out_png=None, out_csv=None):
+def explain_with_shap(preproc, model, X_raw, feature_names, method="auto", out_png=None, out_csv=None):
     try:
         import shap
     except Exception:
         print("SHAP not installed; skipping explanations")
         return None
 
-    # Use shap.Explainer which will pick an appropriate explainer
-    explainer = shap.Explainer(model, feature_names=feature_names)
-    vals = explainer(X)
-    # summary values per row
-    shap_df = pd.DataFrame(vals.values, columns=feature_names)
-    if out_csv:
-        shap_df.to_csv(out_csv, index=False)
-    return shap_df
+    # Build a pipeline that accepts raw DataFrame rows and returns probabilities
+    try:
+        from sklearn.pipeline import Pipeline
+        pipeline = Pipeline([("preprocessor", preproc), ("model", model)])
+    except Exception:
+        pipeline = None
+
+    # Use provided method or let SHAP pick the best explainer
+    try:
+        if pipeline is not None:
+            explainer = shap.Explainer(pipeline, X_raw, algorithm=method if method != "auto" else None)
+            vals = explainer(X_raw)
+            # shap returns arrays matching input features when given a pipeline with a DataFrame
+            shap_values = vals.values
+            # ensure shape matches feature_names
+            if shap_values.shape[1] == len(feature_names):
+                shap_df = pd.DataFrame(shap_values, columns=feature_names)
+            else:
+                # fallback: flatten per-feature contributions into numbered cols
+                cols = [f"shap_{i}" for i in range(shap_values.shape[1])]
+                shap_df = pd.DataFrame(shap_values, columns=cols)
+        else:
+            # As a fallback, explain on preprocessed arrays and map back if possible
+            X_pre = preproc.transform(X_raw)
+            explainer = shap.Explainer(model.predict_proba if hasattr(model, "predict_proba") else model, X_pre)
+            vals = explainer(X_pre)
+            shap_values = vals.values
+            cols = [f"shap_{i}" for i in range(shap_values.shape[1])]
+            shap_df = pd.DataFrame(shap_values, columns=cols)
+
+        if out_csv:
+            shap_df.to_csv(out_csv, index=False)
+        return shap_df
+    except Exception as e:
+        print(f"SHAP explanation failed inside explain_with_shap: {e}")
+        return None
 
 
 def main():
@@ -100,6 +128,7 @@ def main():
     parser.add_argument("--model-file", help="Explicit model joblib to use")
     parser.add_argument("--limit", type=int, default=1, help="Limit rows when reading CSV")
     parser.add_argument("--threshold", type=float, default=0.5, help="Decision threshold for positive class")
+    parser.add_argument("--explain-method", default="auto", choices=["auto", "kernel", "linear", "tree", "none"], help="SHAP explainer method to use")
     args = parser.parse_args()
 
     df = load_input(args)
@@ -154,11 +183,12 @@ def main():
 
     # Try SHAP explanations for first row(s)
     try:
-        feat_names = feature_in
-        shap_csv = REPORT_DIR / "shap_values.csv"
-        shap_df = explain_with_shap(model, X, feat_names, out_csv=shap_csv)
-        if shap_df is not None:
-            print(f"Saved SHAP values to {shap_csv}")
+        if args.explain_method != "none":
+            feat_names = feature_in
+            shap_csv = REPORT_DIR / "shap_values.csv"
+            shap_df = explain_with_shap(preproc, model, X_raw, feat_names, method=args.explain_method, out_csv=shap_csv)
+            if shap_df is not None:
+                print(f"Saved SHAP values to {shap_csv}")
     except Exception as e:
         print(f"SHAP explanation failed: {e}")
 
